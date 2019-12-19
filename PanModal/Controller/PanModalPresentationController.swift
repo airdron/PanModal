@@ -143,13 +143,6 @@ open class PanModalPresentationController: UIPresentationController {
         return view
     }()
 
-    /**
-     Override presented view to return the pan container wrapper
-     */
-    public override var presentedView: UIView {
-        return panContainerView
-    }
-
     // MARK: - Gesture Recognizers
 
     /**
@@ -234,7 +227,7 @@ open class PanModalPresentationController: UIPresentationController {
 
             self.adjustPresentedViewFrame()
             if presentable.shouldRoundTopCorners {
-                self.addRoundedCorners(to: self.presentedView)
+                self.addRoundedCorners(to: self.panContainerView)
             }
         })
     }
@@ -315,7 +308,7 @@ private extension PanModalPresentationController {
     var isPresentedViewAnchored: Bool {
         if !isPresentedViewAnimating
             && extendsPanScrolling
-            && presentedView.frame.minY <= anchoredYPosition {
+            && panContainerView.frame.minY <= anchoredYPosition {
             return true
         }
 
@@ -341,15 +334,15 @@ private extension PanModalPresentationController {
          & PanModalPresentable, the presented view should be added to the container view
          in the presentation animator instead of here
          */
-        containerView.addSubview(presentedView)
+        containerView.addSubview(panContainerView)
         containerView.addGestureRecognizer(panGestureRecognizer)
 
         if presentable.showDragIndicator {
-            addDragIndicatorView(to: presentedView)
+            addDragIndicatorView(to: panContainerView)
         }
 
         if presentable.shouldRoundTopCorners {
-            addRoundedCorners(to: presentedView)
+            addRoundedCorners(to: panContainerView)
         }
 
         setNeedsLayoutUpdate()
@@ -491,7 +484,7 @@ private extension PanModalPresentationController {
             /**
              If presentedView is translated above the longForm threshold, treat as transition
              */
-            if presentedView.frame.origin.y == anchoredYPosition && extendsPanScrolling {
+            if panContainerView.frame.origin.y == anchoredYPosition && extendsPanScrolling {
                 presentable?.willTransition(to: .longForm)
             }
 
@@ -514,8 +507,8 @@ private extension PanModalPresentationController {
                 if velocity.y < 0 {
                     transition(to: .longForm)
 
-                } else if (nearest(to: presentedView.frame.minY, inValues: [longFormYPosition, containerView.bounds.height]) == longFormYPosition
-                    && presentedView.frame.minY < shortFormYPosition) || presentable?.allowsDragToDismiss == false {
+                } else if (nearest(to: panContainerView.frame.minY, inValues: [longFormYPosition, containerView.bounds.height]) == longFormYPosition
+                    && panContainerView.frame.minY < shortFormYPosition) || presentable?.allowsDragToDismiss == false {
                     transition(to: .shortForm)
 
                 } else {
@@ -528,7 +521,7 @@ private extension PanModalPresentationController {
                  The `containerView.bounds.height` is used to determine
                  how close the presented view is to the bottom of the screen
                  */
-                let position = nearest(to: presentedView.frame.minY, inValues: [containerView.bounds.height, shortFormYPosition, longFormYPosition])
+                let position = nearest(to: panContainerView.frame.minY, inValues: [containerView.bounds.height, shortFormYPosition, longFormYPosition])
 
                 if position == longFormYPosition {
                     transition(to: .longForm)
@@ -575,10 +568,10 @@ private extension PanModalPresentationController {
          If the presentedView is not anchored to long form, reduce the rate of movement
          above the threshold
          */
-        if presentedView.frame.origin.y < longFormYPosition {
+        if panContainerView.frame.origin.y < longFormYPosition {
             yDisplacement /= 2.0
         }
-        adjust(toYPosition: presentedView.frame.origin.y + yDisplacement)
+        adjust(toYPosition: panContainerView.frame.origin.y + yDisplacement)
 
         panGestureRecognizer.setTranslation(.zero, in: presentedView)
     }
@@ -648,20 +641,20 @@ private extension PanModalPresentationController {
      Sets the y position of the presentedView & adjusts the backgroundView.
      */
     func adjust(toYPosition yPos: CGFloat) {
-        presentedView.frame.origin.y = max(yPos, anchoredYPosition)
+        panContainerView.frame.origin.y = max(yPos, anchoredYPosition)
         
-        guard presentedView.frame.origin.y > shortFormYPosition else {
+        guard panContainerView.frame.origin.y > shortFormYPosition else {
             backgroundView.dimState = .max
             return
         }
 
-        let yDisplacementFromShortForm = presentedView.frame.origin.y - shortFormYPosition
+        let yDisplacementFromShortForm = panContainerView.frame.origin.y - shortFormYPosition
 
         /**
          Once presentedView is translated below shortForm, calculate yPos relative to bottom of screen
          and apply percentage to backgroundView alpha
          */
-        backgroundView.dimState = .percent(1.0 - (yDisplacementFromShortForm / presentedView.frame.height))
+        backgroundView.dimState = .percent(1.0 - (yDisplacementFromShortForm / panContainerView.frame.height))
     }
 
     /**
@@ -800,7 +793,7 @@ private extension PanModalPresentationController {
          Decrease the view bounds by the y offset so the scroll view stays in place
          and we can still get updates on its content offset
          */
-        presentedView.bounds.size = CGSize(width: presentedSize.width, height: presentedSize.height + yOffset)
+        panContainerView.bounds.size = CGSize(width: presentedSize.width, height: presentedSize.height + yOffset)
 
         if oldYValue > yOffset {
             /**
@@ -808,7 +801,7 @@ private extension PanModalPresentationController {
              until half way through the deceleration so that it appears
              as if we're transferring the scrollView drag momentum to the entire view
              */
-            presentedView.frame.origin.y = longFormYPosition - yOffset
+            panContainerView.frame.origin.y = longFormYPosition - yOffset
         } else {
             scrollViewYOffset = 0
             snap(toYPosition: longFormYPosition)
